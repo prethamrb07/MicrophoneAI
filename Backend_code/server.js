@@ -13,7 +13,20 @@ const PORT = process.env.PORT || 4000;
 
 // ── Middleware ─────────────────────────────────────────────
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc)
+        if (!origin) return callback(null, true);
+        // Allow localhost and any vercel.app domain
+        const allowed = [
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:3000',
+        ];
+        if (allowed.includes(origin) || origin.endsWith('.vercel.app')) {
+            return callback(null, true);
+        }
+        return callback(null, true); // Allow all for hackathon demo
+    },
     credentials: true,
 }));
 app.use(express.json());
@@ -55,7 +68,7 @@ setupWebSocket(httpServer);
 getDb();
 console.log('📦 Database initialized');
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`
 ┌──────────────────────────────────────────────┐
 │                                              │

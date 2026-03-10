@@ -1,0 +1,20 @@
+databases:
+  - name: podcastai-db
+    plan: free
+    databaseName: podcastai
+
+services:
+  - type: web
+    name: podcastai-backend
+    runtime: node
+    plan: free
+    rootDir: Backend_code
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
