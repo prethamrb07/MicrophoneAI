@@ -52,6 +52,22 @@ export class PodcastWebSocket {
                         break;
                     case 'pong':
                         break;
+                    // WebRTC signaling
+                    case 'webrtc_offer':
+                        this._emit('webrtc_offer', msg);
+                        break;
+                    case 'webrtc_answer':
+                        this._emit('webrtc_answer', msg);
+                        break;
+                    case 'webrtc_ice_candidate':
+                        this._emit('webrtc_ice_candidate', msg);
+                        break;
+                    case 'peer_joined':
+                        this._emit('peer_joined', msg);
+                        break;
+                    case 'peer_left':
+                        this._emit('peer_left', msg);
+                        break;
                     default:
                         console.warn('Unknown WS message type:', msg.type);
                 }
@@ -81,6 +97,19 @@ export class PodcastWebSocket {
 
     requestSuggestion() {
         this._send({ type: 'request_suggestion' });
+    }
+
+    // WebRTC signaling methods
+    sendWebRTCOffer(offer) {
+        this._send({ type: 'webrtc_offer', offer });
+    }
+
+    sendWebRTCAnswer(answer) {
+        this._send({ type: 'webrtc_answer', answer });
+    }
+
+    sendICECandidate(candidate) {
+        this._send({ type: 'webrtc_ice_candidate', candidate });
     }
 
     ping() {

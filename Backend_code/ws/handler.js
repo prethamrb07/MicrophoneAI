@@ -48,6 +48,24 @@ export function setupWebSocket(server) {
             userId: user.userId,
         }));
 
+        // Notify other clients that a new peer joined
+        broadcastToSessionExcept(sessionId, ws, {
+            type: 'peer_joined',
+            hostId: hostId || 'host_a',
+            userName: user.name,
+        });
+
+        // Send list of existing peers to the new client
+        for (const [otherWs, info] of clients) {
+            if (otherWs !== ws && otherWs.readyState === 1) {
+                ws.send(JSON.stringify({
+                    type: 'peer_joined',
+                    hostId: info.hostId,
+                    userName: info.userName,
+                }));
+            }
+        }
+
         // Handle messages
         ws.on('message', async (data, isBinary) => {
             if (isBinary) {
@@ -63,6 +81,12 @@ export function setupWebSocket(server) {
                         case 'request_suggestion':
                             await handleSuggestionRequest(ws, sessionId, hostId);
                             break;
+                        // WebRTC signaling — relay to other peers in session
+                        case 'webrtc_offer':
+                        case 'webrtc_answer':
+                        case 'webrtc_ice_candidate':
+                            relayToOtherPeers(ws, sessionId, msg);
+                            break;
                         default:
                             console.warn('Unknown WS message type:', msg.type);
                     }
@@ -73,6 +97,12 @@ export function setupWebSocket(server) {
         });
 
         ws.on('close', () => {
+            // Notify others that peer left
+            broadcastToSessionExcept(sessionId, ws, {
+                type: 'peer_left',
+                hostId: hostId || 'host_a',
+                userName: user.name,
+            });
             clients.delete(ws);
             if (clients.size === 0) {
                 sessionClients.delete(sessionId);
@@ -200,6 +230,30 @@ function broadcastToSession(sessionId, message) {
     const data = JSON.stringify(message);
     for (const [clientWs] of clients) {
         if (clientWs.readyState === 1) { // WebSocket.OPEN
+            clientWs.send(data);
+        }
+    }
+}
+
+function broadcastToSessionExcept(sessionId, excludeWs, message) {
+    const clients = sessionClients.get(sessionId);
+    if (!clients) return;
+
+    const data = JSON.stringify(message);
+    for (const [clientWs] of clients) {
+        if (clientWs !== excludeWs && clientWs.readyState === 1) {
+            clientWs.send(data);
+        }
+    }
+}
+
+function relayToOtherPeers(senderWs, sessionId, message) {
+    const clients = sessionClients.get(sessionId);
+    if (!clients) return;
+
+    const data = JSON.stringify(message);
+    for (const [clientWs] of clients) {
+        if (clientWs !== senderWs && clientWs.readyState === 1) {
             clientWs.send(data);
         }
     }

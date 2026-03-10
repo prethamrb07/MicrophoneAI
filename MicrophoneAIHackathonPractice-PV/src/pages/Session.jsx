@@ -21,6 +21,10 @@ export default function Session() {
     const [timer, setTimer] = useState(0);
     const [micLevel, setMicLevel] = useState(0);
     const [error, setError] = useState('');
+    // WebRTC state
+    const [peerConnected, setPeerConnected] = useState(false);
+    const [peerName, setPeerName] = useState('');
+    const [callActive, setCallActive] = useState(false);
 
     // Refs
     const wsRef = useRef(null);
@@ -31,8 +35,17 @@ export default function Session() {
     const transcriptEndRef = useRef(null);
     const timerRef = useRef(null);
     const animFrameRef = useRef(null);
+    // WebRTC refs
+    const peerConnectionRef = useRef(null);
+    const remoteAudioRef = useRef(null);
+    const localStreamRef = useRef(null);
 
     const hostId = 'host_a'; // Default to host_a for creator
+
+    const ICE_SERVERS = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+    ];
 
     // Auto-scroll transcript
     useEffect(() => {
@@ -48,6 +61,54 @@ export default function Session() {
         }
         return () => clearInterval(timerRef.current);
     }, [isRecording]);
+
+    // Create WebRTC peer connection
+    const createPeerConnection = useCallback(() => {
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate && wsRef.current) {
+                wsRef.current.sendICECandidate(event.candidate);
+            }
+        };
+
+        pc.ontrack = (event) => {
+            if (remoteAudioRef.current && event.streams[0]) {
+                remoteAudioRef.current.srcObject = event.streams[0];
+                setCallActive(true);
+            }
+        };
+
+        pc.oniceconnectionstatechange = () => {
+            if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                setCallActive(false);
+            }
+        };
+
+        peerConnectionRef.current = pc;
+        return pc;
+    }, []);
+
+    // Start a call (as the offerer)
+    const startCall = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStreamRef.current = stream;
+
+            const pc = createPeerConnection();
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            if (wsRef.current) {
+                wsRef.current.sendWebRTCOffer(offer);
+            }
+        } catch (err) {
+            console.error('Failed to start call:', err);
+            setError('Failed to access microphone for call');
+        }
+    }, [createPeerConnection]);
 
     // WebSocket connection
     useEffect(() => {
@@ -88,13 +149,81 @@ export default function Session() {
             setError(msg.message || 'An error occurred');
         });
 
+        // WebRTC signaling handlers
+        ws.on('peer_joined', (msg) => {
+            setPeerConnected(true);
+            setPeerName(msg.userName || msg.hostId);
+            // Auto-initiate call when peer joins
+            setTimeout(() => startCall(), 500);
+        });
+
+        ws.on('peer_left', () => {
+            setPeerConnected(false);
+            setPeerName('');
+            setCallActive(false);
+            if (peerConnectionRef.current) {
+                peerConnectionRef.current.close();
+                peerConnectionRef.current = null;
+            }
+        });
+
+        ws.on('webrtc_offer', async (msg) => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                localStreamRef.current = stream;
+
+                const pc = createPeerConnection();
+                stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+                await pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                ws.sendWebRTCAnswer(answer);
+            } catch (err) {
+                console.error('Failed to handle offer:', err);
+            }
+        });
+
+        ws.on('webrtc_answer', async (msg) => {
+            try {
+                if (peerConnectionRef.current) {
+                    await peerConnectionRef.current.setRemoteDescription(
+                        new RTCSessionDescription(msg.answer)
+                    );
+                }
+            } catch (err) {
+                console.error('Failed to handle answer:', err);
+            }
+        });
+
+        ws.on('webrtc_ice_candidate', async (msg) => {
+            try {
+                if (peerConnectionRef.current && msg.candidate) {
+                    await peerConnectionRef.current.addIceCandidate(
+                        new RTCIceCandidate(msg.candidate)
+                    );
+                }
+            } catch (err) {
+                console.error('Failed to add ICE candidate:', err);
+            }
+        });
+
         const token = auth.getToken();
         if (token && sessionId) {
             ws.connect(token, sessionId, hostId);
         }
 
-        return () => ws.disconnect();
-    }, [sessionId]);
+        return () => {
+            ws.disconnect();
+            if (peerConnectionRef.current) {
+                peerConnectionRef.current.close();
+            }
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(t => t.stop());
+            }
+        };
+    }, [sessionId, createPeerConnection, startCall]);
 
     // Mic level animation
     const updateMicLevel = useCallback(() => {
@@ -373,6 +502,43 @@ export default function Session() {
                             </div>
                         )}
                     </div>
+
+                    {/* Peer Call Status */}
+                    <div className="session-info-card glass-card">
+                        <div className="session-panel-header">
+                            <h2>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+                                </svg>
+                                Live Call
+                            </h2>
+                        </div>
+                        <div className="info-items">
+                            {peerConnected ? (
+                                <>
+                                    <div className="info-item">
+                                        <span className="info-label">Co-Host</span>
+                                        <span className="info-value" style={{ color: '#a78bfa' }}>{peerName}</span>
+                                    </div>
+                                    <div className="info-item">
+                                        <span className="info-label">Audio</span>
+                                        <span className="info-value" style={{ color: callActive ? '#4ade80' : '#fbbf24' }}>
+                                            {callActive ? '🔊 Connected' : '⏳ Connecting...'}
+                                        </span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="info-item">
+                                    <span className="info-label" style={{ color: '#94a3b8' }}>
+                                        Waiting for co-host to join...
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Hidden remote audio element */}
+                    <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
 
                     {/* Session Info */}
                     <div className="session-info-card glass-card">
