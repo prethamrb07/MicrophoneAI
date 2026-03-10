@@ -1,0 +1,126 @@
+/* ============================================
+   Auth Pages (Login & Register)
+   ============================================ */
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* Brand */
+.auth-brand {
+    text-align: center;
+}
+
+.auth-logo {
+    margin: 0 auto 16px;
+    width: 56px;
+    height: 56px;
+    animation: logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+.auth-logo svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.3));
+}
+
+.auth-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
+    margin-top: 4px;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+}
+
+/* Form */
+.auth-form {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.auth-form-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.auth-form-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    margin-top: -12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-error {
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    font-size: 0.85rem;
+}
+
+.auth-success {
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    color: #86efac;
+    font-size: 0.85rem;
+}
+
+.auth-submit {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.auth-switch {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+}
+
+.auth-switch a {
+    font-weight: 500;
+}
+
+@media (max-width: 480px) {
+    .auth-form {
+        padding: 24px 20px;
+    }
+}

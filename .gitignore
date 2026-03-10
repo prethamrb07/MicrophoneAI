@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Database
+*.db
+
+# Build output
+dist/
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Gemini/system files
+.gemini/
+.system_generated/
+.tempmediaStorage/
+browser/
+*.webp
+*.png
+*.resolved
+*.resolved.*
+*.metadata.json
+implementation_plan.md
+walkthrough.md
+task.md
