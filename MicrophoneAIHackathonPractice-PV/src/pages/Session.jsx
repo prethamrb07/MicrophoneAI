@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../services/auth';
 import { PodcastWebSocket } from '../services/websocket';
 import './Session.css';
@@ -40,7 +40,8 @@ export default function Session() {
     const remoteAudioRef = useRef(null);
     const localStreamRef = useRef(null);
 
-    const hostId = 'host_a'; // Default to host_a for creator
+    const location = useLocation();
+    const hostId = location.state?.hostRole || 'host_a'; // Get role from navigation state or default to host_a
 
     const ICE_SERVERS = [
         { urls: 'stun:stun.l.google.com:19302' },

@@ -53,7 +53,7 @@ export default function Dashboard() {
         setError('');
         try {
             const data = await joinSession(joinCode.trim());
-            navigate(`/session/${data.sessionId}`);
+            navigate(`/session/${data.sessionId}`, { state: { hostRole: data.hostRole || 'host_b' } });
         } catch (err) {
             setError(err.message || 'Failed to join session');
         } finally {
@@ -68,7 +68,7 @@ export default function Dashboard() {
 
     const startSession = () => {
         if (createdSession) {
-            navigate(`/session/${createdSession.sessionId}`);
+            navigate(`/session/${createdSession.sessionId}`, { state: { hostRole: 'host_a' } });
         }
     };
 
