@@ -1,4 +1,4 @@
-const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:4000';
+const WS_BASE = import.meta.env.VITE_WS_URL || 'wss://microphoneai.onrender.com';
 const MAX_RECONNECTS = 3;
 const RECONNECT_WINDOW = 30000; // 30 seconds
 const PING_INTERVAL = 15000;

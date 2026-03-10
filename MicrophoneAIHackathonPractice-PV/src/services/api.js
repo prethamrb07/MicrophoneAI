@@ -1,6 +1,6 @@
 import { auth } from './auth';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://microphoneai.onrender.com/v1';
 
 async function request(endpoint, options = {}) {
     const headers = {
